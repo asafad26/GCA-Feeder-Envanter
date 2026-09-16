@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GCA — Envanter Yönetim Sistemi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-main: #f1f5f9;
+    --panel-bg: #ffffff;
+    --border-color: #cbd5e1;
+    --border-hover: #94a3b8;
+    
+    --gca-navy: #0A192F;
+    --gca-blue: #00A8CC;
+    --gca-blue-dark: #0086a3;
+    --gca-light-blue: #e6f7fa;
+    
+    --text-main: #0f172a;
+    --text-muted: #475569;
+    --text-white: #ffffff;
+    
+    --success: #10b981;
+    --success-bg: #ecfdf5;
+    
+    --warning: #f59e0b;
+    --warning-bg: #fffbeb;
+    
+    --danger: #ef4444;
+    --danger-bg: #fef2f2;
+    
+    --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 70px;
+  }
+
+  button, input, select, textarea { font-family: inherit; }
+
+  /* LOGIN */
+  #loginScreen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: linear-gradient(135deg, var(--gca-navy) 0%, #1e293b 100%);
+  }
+  .login-card {
+    width: 100%; max-width: 400px;
+    background: var(--panel-bg);
+    border-radius: 16px; padding: 36px 28px;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
+  }
+  .brand-badge {
+    display: inline-block;
+    background: var(--gca-navy);
+    color: var(--gca-blue);
+    font-weight: 800;
+    font-size: 1.2rem;
+    padding: 4px 12px;
+    border-radius: 6px;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+  }
+  .login-card h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; color: var(--gca-navy); }
+  .login-card p.sub { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 24px; }
+  .login-field { margin-bottom: 16px; }
+  .login-field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+  .login-field input {
+    width: 100%; padding: 12px 14px;
+    border: 1px solid var(--border-color); border-radius: var(--radius);
+    font-size: 0.95rem; transition: all 0.2s;
+  }
+  .login-field input:focus { outline: none; border-color: var(--gca-blue); box-shadow: 0 0 0 3px rgba(0,168,204,0.15); }
+  .login-btn {
+    width: 100%; background: var(--gca-blue); color: #fff;
+    border: none; padding: 12px; border-radius: var(--radius);
+    font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 8px; transition: background 0.2s;
+  }
+  .login-btn:hover { background: var(--gca-blue-dark); }
+  .login-error { color: var(--danger); font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; display: none; }
+  .login-hint {
+    margin-top: 20px; padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+    font-family: var(--font-mono); font-size: 0.75rem;
+    color: var(--text-muted); line-height: 1.6;
+  }
+
+  /* APP SHELL */
+  #appShell { display: none; min-height: 100vh; flex-direction: column; }
+  .topbar {
+    background: var(--gca-navy); color: #fff;
+    display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+    position: sticky; top: 0; z-index: 20; box-shadow: var(--shadow-md);
+  }
+  .menu-btn { background: none; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .topbar-title { font-size: 1.05rem; font-weight: 700; flex: 1; letter-spacing: 0.3px; }
+  .user-chip { display: flex; flex-direction: column; align-items: flex-end; font-size: 0.75rem; }
+  .user-chip .uname { font-weight: 600; font-size: 0.85rem; color: #fff; }
+  .role-badge {
+    font-family: var(--font-mono); font-size: 0.65rem; padding: 2px 6px;
+    border-radius: 4px; font-weight: 600; margin-top: 2px;
+  }
+  .role-badge.engineer { background: var(--gca-blue); color: #fff; }
+  .role-badge.field { background: #334155; color: #cbd5e1; }
+
+  /* Drawer */
+  .drawer-overlay { position: fixed; inset: 0; background: rgba(10,25,47,0.5); z-index: 30; display: none; backdrop-filter: blur(2px); }
+  .drawer-overlay.open { display: block; }
+  .drawer {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 280px;
+    background: var(--panel-bg); z-index: 31;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    display: flex; flex-direction: column; padding: 20px 0; box-shadow: var(--shadow-md);
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head { padding: 0 20px 16px; border-bottom: 1px solid var(--border-color); margin-bottom: 8px; }
+  .drawer-head .brand { font-weight: 800; color: var(--gca-navy); font-size: 1.1rem; }
+  .drawer-head .name { font-weight: 600; font-size: 0.95rem; margin-top: 4px; }
+  .drawer-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px; color: var(--text-muted); cursor: pointer;
+    font-size: 0.9rem; font-weight: 500;
+  }
+  .drawer-item:hover { background: var(--bg-main); color: var(--text-main); }
+  .drawer-item.active { background: var(--gca-light-blue); color: var(--gca-blue-dark); font-weight: 700; border-left: 4px solid var(--gca-blue); }
+  .drawer-footer { margin-top: auto; padding: 16px 20px 0; border-top: 1px solid var(--border-color); }
+  .logout-item { color: var(--danger); cursor: pointer; font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+
+  /* Bottom Navigation */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--panel-bg); border-top: 1px solid var(--border-color);
+    display: flex; justify-content: space-around; padding: 8px 0; z-index: 10;
+  }
+  .nav-button {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: none; border: none; color: var(--text-muted);
+    font-size: 0.7rem; font-weight: 600; cursor: pointer; flex: 1;
+  }
+  .nav-button.active { color: var(--gca-blue-dark); }
+
+  main { flex: 1; padding: 20px 16px; }
+  .wrap { max-width: 768px; margin: 0 auto; }
+
+  .view-title { font-size: 1.35rem; font-weight: 700; color: var(--gca-navy); margin-bottom: 4px; }
+  .view-sub { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 20px; }
+
+  /* Stats */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat-card {
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow-sm);
+  }
+  .stat-card .num { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700; color: var(--gca-navy); }
+  .stat-card .lbl { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+  .stat-card.red .num { color: var(--danger); }
+  .stat-card.amber .num { color: var(--warning); }
+
+  /* Banners */
+  .banner {
+    background: var(--danger-bg); border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 20px;
+  }
+  .banner.warning-banner {
+    background: var(--warning-bg); border-color: rgba(245, 158, 11, 0.2);
+  }
+  .banner-title { font-weight: 700; color: var(--danger); font-size: 0.9rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .banner.warning-banner .banner-title { color: var(--warning); }
+  .banner-row { font-size: 0.85rem; display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px dashed rgba(239, 68, 68, 0.2); }
+  .banner.warning-banner .banner-row { border-top-color: rgba(245, 158, 11, 0.2); }
+  .banner-row:first-of-type { border-top: none; }
+
+  /* Search & Filters */
+  .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+  .search-bar input {
+    flex: 1; padding: 10px 14px; border: 1px solid var(--border-color);
+    border-radius: var(--radius); background: var(--panel-bg); font-size: 0.9rem;
+  }
+  .search-bar input:focus { outline: none; border-color: var(--gca-blue); }
+
+  .filter-pills { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
+  .pill {
+    padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color);
+    background: var(--panel-bg); font-size: 0.8rem; font-weight: 600; color: var(--text-muted);
+    cursor: pointer; white-space: nowrap;
+  }
+  .pill.active { background: var(--gca-navy); color: #fff; border-color: var(--gca-navy); }
+
+  .cat-card {
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; box-shadow: var(--shadow-sm);
+  }
+  .cat-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; }
+  .cat-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--success); flex: none; }
+  .cat-dot.watch { background: var(--warning); }
+  .cat-dot.low { background: var(--danger); }
+  .cat-name { font-weight: 600; font-size: 0.95rem; flex: 1; color: var(--gca-navy); }
+  .cat-count { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+  .cat-del { color: var(--text-muted); background: none; border: none; cursor: pointer; padding: 4px; }
+  .cat-del:hover { color: var(--danger); }
+
+  /* Item Cards */
+  .item {
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-sm);
+  }
+  .item.low { border-left: 4px solid var(--danger); }
+  .item.watch { border-left: 4px solid var(--warning); }
+  .item.ok { border-left: 4px solid var(--success); }
+  .item-main { flex: 1; min-width: 0; }
+  .item-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 2px; }
+  .item-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .item-meta .figure { font-size: 0.75rem; color: var(--text-muted); }
+  
+  .badge {
+    font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;
+  }
+  .badge.low { background: var(--danger-bg); color: var(--danger); }
+  .badge.watch { background: var(--warning-bg); color: var(--warning); }
+  .badge.ok { background: var(--success-bg); color: var(--success); }
+
+  .qty-controls { display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+  .qty-btn {
+    width: 32px; height: 32px; border: none; background: var(--panel-bg);
+    font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .qty-btn:hover { background: var(--bg-main); }
+  .qty-val {
+    font-family: var(--font-mono); font-weight: 700; min-width: 36px;
+    text-align: center; font-size: 0.85rem; border-left: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color); height: 32px; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Form & Inputs */
+  .card-box {
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    border-radius: var(--radius); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow-sm);
+  }
+  .field-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
+  .field label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+  .field input, .field select, .field textarea {
+    padding: 10px 12px; border: 1px solid var(--border-color);
+    border-radius: 8px; font-size: 0.875rem; background: var(--panel-bg);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--gca-blue); }
+
+  .btn {
+    background: var(--gca-navy); color: #fff; border: none;
+    padding: 10px 16px; border-radius: 8px; font-size: 0.85rem;
+    font-weight: 600; cursor: pointer; transition: background 0.2s;
+    display: inline-flex; align-items: center; gap: 6px; justify-content: center;
+  }
+  .btn:hover { background: var(--gca-blue-dark); }
+  .btn.ghost { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
+  .btn.ghost:hover { background: var(--bg-main); }
+  .btn.danger { background: var(--danger); }
+  .btn.danger:hover { background: #dc2626; }
+  .btn.success { background: var(--success); }
+  .btn.success:hover { background: #059669; }
+  .btn.small { padding: 6px 12px; font-size: 0.78rem; }
+
+  /* Incoming & Requests Cards */
+  .incoming-row {
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    border-radius: var(--radius); padding: 14px; margin-bottom: 10px; box-shadow: var(--shadow-sm);
+  }
+  .incoming-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .incoming-item { font-weight: 600; font-size: 0.95rem; color: var(--gca-navy); }
+  .incoming-date { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); }
+  .incoming-meta-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border-color); }
+
+  /* History & Users */
+  .hist-row { border-bottom: 1px solid var(--border-color); padding: 10px 0; font-size: 0.85rem; }
+  .hist-top { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .hist-time { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); }
+  .hist-user { font-weight: 600; font-size: 0.8rem; color: var(--gca-navy); }
+
+  .empty { text-align: center; color: var(--text-muted); font-size: 0.875rem; padding: 32px 16px; background: var(--panel-bg); border: 1px dashed var(--border-color); border-radius: var(--radius); }
+
+  /* Confirm Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(10,25,47,0.5); z-index: 50; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: var(--panel-bg); border-radius: var(--radius); padding: 20px; max-width: 400px; width: 100%; box-shadow: var(--shadow-md); }
+  .modal-box p { font-size: 0.9rem; margin-bottom: 16px; line-height: 1.5; color: var(--text-main); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="brand-badge">GCA</div>
+    <h1>Envanter Portalı</h1>
+    <p class="sub">Devam etmek için kullanıcı bilgilerinizle giriş yapın.</p>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-field">
+      <label>Kullanıcı Adı</label>
+      <input type="text" id="loginUser" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label>Şifre</label>
+      <input type="password" id="loginPass" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="loginBtn">Sisteme Giriş Yap</button>
+    <div class="login-hint">
+      Demo hesaplar:<br>
+      muhendis / 1234 — tam yetki<br>
+      saha / 1234 — sınırlı yetki
+    </div>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="appShell">
+  <div class="topbar">
+    <button class="menu-btn" id="menuBtn" aria-label="Menü">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-title" id="topbarTitle">GCA — Envanter & Ömür Takip</div>
+    <div class="user-chip">
+      <span class="uname" id="chipName"></span>
+      <span class="role-badge" id="chipRole"></span>
+    </div>
+  </div>
+
+  <!-- Drawer -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-head">
+      <div class="brand">GCA YÖNETİM</div>
+      <div class="name" id="drawerName"></div>
+      <div class="role" id="drawerRole" style="margin-top: 4px;"></div>
+    </div>
+    <div class="drawer-item" data-view="dashboard">Genel Bakış</div>
+    <div class="drawer-item" data-view="inventory">Envanter Listesi</div>
+    <div class="drawer-item" data-view="lifetime">Ömürlü Parçalar</div>
+    <div class="drawer-item" data-view="newentry" id="menuNewEntry">Yeni Giriş Ekle</div>
+    <div class="drawer-item" data-view="incoming">Talepler & Sevkiyat</div>
+    <div class="drawer-item" data-view="history" id="menuHistory">İşlem Geçmişi</div>
+    <div class="drawer-item" data-view="users" id="menuUsers">Kullanıcı Yönetimi</div>
+    <div class="drawer-footer">
+      <div class="logout-item" id="logoutBtn">Çıkış Yap</div>
+    </div>
+  </div>
+
+  <main>
+    <div class="wrap" id="mainContent"></div>
+  </main>
+
+  <!-- Mobil Alt Navigasyon -->
+  <nav class="bottom-nav">
+    <button class="nav-button" data-view="dashboard">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Genel
+    </button>
+    <button class="nav-button" data-view="inventory">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V21H3V8"/><path d="M1 3h22v5H1z"/></svg>
+      Envanter
+    </button>
+    <button class="nav-button" data-view="lifetime">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Ömürlü Parça
+    </button>
+    <button class="nav-button" data-view="incoming">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/></svg>
+      Talepler
+    </button>
+  </nav>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <p id="modalMessage"></p>
+    <div id="modalInputs" style="display:none; margin-bottom:12px;"></div>
+    <div class="modal-actions">
+      <button class="btn ghost small" id="modalCancel">İptal</button>
+      <button class="btn danger small" id="modalConfirm">Onayla</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* STORAGE & STATE */
+const USERS_KEY = 'gca-app-users';
+const DATA_KEY = 'gca-app-data';
+const SESSION_KEY = 'gca-app-session';
+
+let users = [];
+let state = { categories: [], items: [], requests: [], incoming: [], history: [], lifetimeItems: [] };
+let currentUser = null;
+let currentView = 'dashboard';
+let selectedCategoryId = null;
+let searchQuery = '';
+let activeFilter = 'all';
+
+/* HELPERS */
+function uid(p){ return (p||'i') + Date.now() + Math.floor(Math.random()*1000); }
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function isEngineer(){ return currentUser && currentUser.role === 'engineer'; }
+function statusOf(it){
+  if(it.qty <= it.min) return 'low';
+  if(it.qty <= it.min * 1.3) return 'watch';
+  return 'ok';
+}
+function fmtDate(d){
+  try{ return new Date(d + 'T00:00:00').toLocaleDateString('tr-TR', {day:'2-digit', month:'short', year:'numeric'}); }
+  catch(e){ return d; }
+}
+
+/* Ömürlü Parça Hesaplama */
+function calcLifetimeStatus(item){
+  const installDate = new Date(item.installDate + 'T00:00:00');
+  const expiryDate = new Date(installDate);
+  expiryDate.setDate(expiryDate.getDate() + parseInt(item.lifeSpanDays, 10));
+  
+  const now = new Date(); now.setHours(0,0,0,0);
+  const remainingDays = Math.round((expiryDate - now) / 86400000);
+  
+  let status = 'ok';
+  if (remainingDays <= 0) status = 'expired';
+  else if (remainingDays <= 7) status = 'warning';
+  
+  return { remainingDays, expiryDate, status };
+}
+
+function logHistory(action){
+  state.history.unshift({
+    id: uid('h'),
+    ts: new Date().toISOString(),
+    user: currentUser ? currentUser.name : '—',
+    action
+  });
+  if(state.history.length > 300) state.history.length = 300;
+}
+
+/* CSV Export */
+function exportToCSV() {
+  if (state.items.length === 0) {
+    alert('Dışa aktarılacak malzeme bulunmamaktadır.');
+    return;
+  }
+  let csvContent = "\uFEFFGrup,Malzeme Adı,Mevcut Adet,Kritik Eşik,Birim,Durum\n";
+  state.items.forEach(it => {
+    const cat = state.categories.find(c => c.id === it.categoryId);
+    const catName = cat ? cat.name : 'Genel';
+    const status = statusOf(it) === 'low' ? 'Kritik' : (statusOf(it) === 'watch' ? 'Azalıyor' : 'Yeterli');
+    csvContent += `"${catName}","${it.name}",${it.qty},${it.min},"${it.unit||'adet'}","${status}"\n`;
+  });
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('href', url);
+  a.setAttribute('download', `GCA_Envanter_${new Date().toISOString().slice(0,10)}.csv`);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/* STORAGE OPS */
+function loadAll(){
+  const localUsers = localStorage.getItem(USERS_KEY);
+  users = localUsers ? JSON.parse(localUsers) : [];
+  if(users.length === 0) seedDefaultUsers();
+
+  const localData = localStorage.getItem(DATA_KEY);
+  if(localData){
+    state = JSON.parse(localData);
+    state.categories = state.categories || [];
+    state.items = state.items || [];
+    state.requests = state.requests || [];
+    state.incoming = state.incoming || [];
+    state.history = state.history || [];
+    state.lifetimeItems = state.lifetimeItems || [];
+  }
+
+  const localSession = localStorage.getItem(SESSION_KEY);
+  if(localSession){
+    const sess = JSON.parse(localSession);
+    const found = users.find(u => u.username === sess.username);
+    if(found) currentUser = found;
+  }
+}
+
+function seedDefaultUsers(){
+  users = [
+    { username:'muhendis', password:'1234', name:'Üretim Mühendisi', role:'engineer' },
+    { username:'saha', password:'1234', name:'Saha Operatörü', role:'field' }
+  ];
+  saveUsers();
+}
+
+function saveUsers(){ localStorage.setItem(USERS_KEY, JSON.stringify(users)); }
+function saveData(){ localStorage.setItem(DATA_KEY, JSON.stringify(state)); }
+function saveSession(){
+  if(currentUser) localStorage.setItem(SESSION_KEY, JSON.stringify({username: currentUser.username}));
+  else localStorage.removeItem(SESSION_KEY);
+}
+
+/* CONFIRM MODAL */
+function askConfirm(message, onYes, showDateInput = false){
+  document.getElementById('modalMessage').textContent = message;
+  const modalInputs = document.getElementById('modalInputs');
+  
+  if(showDateInput){
+    modalInputs.style.display = 'block';
+    modalInputs.innerHTML = `<div class="field"><label style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Tahmini Varış Tarihi</label><input type="date" id="modalDateVal" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px;" value="${new Date().toISOString().slice(0,10)}"></div>`;
+  } else {
+    modalInputs.style.display = 'none';
+    modalInputs.innerHTML = '';
+  }
+
+  document.getElementById('modalOverlay').classList.add('open');
+  const yesBtn = document.getElementById('modalConfirm');
+  const noBtn = document.getElementById('modalCancel');
+  
+  const cleanup = () => {
+    document.getElementById('modalOverlay').classList.remove('open');
+    yesBtn.onclick = null; noBtn.onclick = null;
+  };
+  
+  yesBtn.onclick = () => {
+    let dateVal = null;
+    if(showDateInput){
+      dateVal = document.getElementById('modalDateVal').value;
+      if(!dateVal) { alert('Lütfen tarih seçiniz.'); return; }
+    }
+    cleanup();
+    onYes(dateVal);
+  };
+  noBtn.onclick = cleanup;
+}
+
+/* LOGIN / LOGOUT */
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function doLogin(){
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const found = users.find(u => u.username === username && u.password === password);
+  if(!found){
+    errEl.textContent = 'Kullanıcı adı veya şifre hatalı.';
+    errEl.style.display = 'block';
+    return;
+  }
+  currentUser = found;
+  saveSession();
+  showApp();
+}
+
+function doLogout(){
+  currentUser = null;
+  saveSession();
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appShell').style.display = 'none';
+}
+
+function showApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'flex';
+  document.getElementById('chipName').textContent = currentUser.name;
+  document.getElementById('chipRole').textContent = currentUser.role === 'engineer' ? 'MÜHENDİS' : 'SAHA';
+  document.getElementById('chipRole').className = 'role-badge ' + currentUser.role;
+  document.getElementById('drawerName').textContent = currentUser.name;
+  document.getElementById('drawerRole').innerHTML = `<span class="role-badge ${currentUser.role}">${currentUser.role === 'engineer' ? 'MÜHENDİS (YETKİLİ)' : 'SAHA EKİBİ'}</span>`;
+  
+  document.getElementById('menuHistory').style.display = isEngineer() ? 'flex' : 'none';
+  document.getElementById('menuUsers').style.display = isEngineer() ? 'flex' : 'none';
+  document.getElementById('menuNewEntry').style.display = isEngineer() ? 'flex' : 'none';
+  switchView('dashboard');
+}
+
+/* DRAWER / NAV */
+document.getElementById('menuBtn').addEventListener('click', () => {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+});
+document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+document.querySelectorAll('[data-view]').forEach(el => {
+  el.addEventListener('click', () => { switchView(el.dataset.view); });
+});
+document.getElementById('logoutBtn').addEventListener('click', doLogout);
+
+function switchView(view){
+  if((view === 'history' || view === 'users' || view === 'newentry') && !isEngineer()) view = 'dashboard';
+  if(view === 'inventory') { selectedCategoryId = null; searchQuery = ''; activeFilter = 'all'; }
+  currentView = view;
+  closeDrawer();
+  
+  document.querySelectorAll('.drawer-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === view);
+  });
+  document.querySelectorAll('.nav-button').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === view);
+  });
+
+  const titles = { 
+    dashboard:'GCA — Genel Bakış', 
+    inventory:'GCA — Envanter Listesi', 
+    lifetime:'GCA — Ömürlü Parçalar',
+    newentry:'GCA — Yeni Giriş', 
+    incoming:'GCA — Talepler & Sevkiyat', 
+    history:'GCA — İşlem Geçmişi', 
+    users:'GCA — Kullanıcı Yönetimi' 
+  };
+  document.getElementById('topbarTitle').textContent = titles[view] || 'GCA Envanter';
+  render();
+}
+
+/* RENDER */
+function render(){
+  const el = document.getElementById('mainContent');
+  if(currentView === 'dashboard') el.innerHTML = renderDashboard();
+  else if(currentView === 'inventory') el.innerHTML = renderInventory();
+  else if(currentView === 'lifetime') el.innerHTML = renderLifetime();
+  else if(currentView === 'newentry') el.innerHTML = renderNewEntry();
+  else if(currentView === 'incoming') el.innerHTML = renderIncoming();
+  else if(currentView === 'history') el.innerHTML = renderHistory();
+  else if(currentView === 'users') el.innerHTML = renderUsers();
+  attachViewHandlers();
+}
+
+/* DASHBOARD */
+function renderDashboard(){
+  const low = state.items.filter(it => statusOf(it) === 'low');
+  const lifetimeAlerts = state.lifetimeItems.map(item => ({ item, info: calcLifetimeStatus(item) }))
+    .filter(res => res.info.status === 'warning' || res.info.status === 'expired');
+  const pendingRequests = state.requests.filter(r => r.status === 'pending');
+
+  let html = `
+    <div class="view-title">GCA Üretim & Envanter Özeti</div>
+    <div class="view-sub">Fabrika stok durumu, talep onayları ve ekipman ömür takibi.</div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="num">${state.items.length}</div><div class="lbl">Toplam Kalem</div></div>
+      <div class="stat-card red"><div class="num">${low.length}</div><div class="lbl">Kritik Stok</div></div>
+      <div class="stat-card amber"><div class="num">${pendingRequests.length}</div><div class="lbl">Onay Bekleyen</div></div>
+    </div>`;
+
+  if(pendingRequests.length){
+    html += `<div class="banner warning-banner">
+      <div class="banner-title">📋 Mühendis Onayı Bekleyen İhtiyaç Talepleri (${pendingRequests.length})</div>
+      ${pendingRequests.map(r => `<div class="banner-row"><span style="font-weight:600;">${escapeHtml(r.itemName)} (${r.qty} ${escapeHtml(r.unit)})</span><span>Talep Eden: ${escapeHtml(r.requestedBy)}</span></div>`).join('')}
+    </div>`;
+  }
+
+  if(lifetimeAlerts.length){
+    html += `<div class="banner warning-banner">
+      <div class="banner-title">⚠️ Değişimi Yaklaşan / Dolan Parçalar</div>
+      ${lifetimeAlerts.map(a => {
+        const txt = a.info.status === 'expired' ? `SÜRESİ DOLDU (${Math.abs(a.info.remainingDays)} gün geçti)` : `Kalan: ${a.info.remainingDays} gün`;
+        return `<div class="banner-row"><span style="font-weight:600;">${escapeHtml(a.item.machineName)} - ${escapeHtml(a.item.name)}</span><span>${txt}</span></div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  if(low.length){
+    html += `<div class="banner">
+      <div class="banner-title">Kritik Stok Seviyeleri</div>
+      ${low.map(it => `<div class="banner-row"><span style="font-weight:600;">${escapeHtml(it.name)}</span><span>Mevcut: ${it.qty} / Eşik: ${it.min}</span></div>`).join('')}
+    </div>`;
+  }
+
+  return html;
+}
+
+/* INVENTORY */
+function renderInventory(){
+  if(selectedCategoryId){
+    const cat = state.categories.find(c => c.id === selectedCategoryId);
+    if(!cat){ selectedCategoryId = null; return renderInventory(); }
+    return renderCategoryDetail(cat);
+  }
+  return renderCategoryList();
+}
+
+function renderCategoryList(){
+  let html = `
+    <div style="display:flex; justify-content:space-between; align-align:center; margin-bottom:12px;">
+      <div>
+        <div class="view-title">Envanter Listesi</div>
+        <div class="view-sub">Kategorilere göre stok durumları.</div>
+      </div>
+      <button class="btn ghost small" id="exportBtn">CSV İndir</button>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Malzeme adı ile ara..." value="${escapeHtml(searchQuery)}">
+    </div>
+    <div id="categoryContainer">
+      ${renderCategoryItemsHtml()}
+    </div>`;
+
+  return html;
+}
+
+function renderCategoryItemsHtml(){
+  let categoriesToDisplay = state.categories;
+  if(searchQuery.trim()){
+    const q = searchQuery.toLowerCase();
+    const matchingCatIds = new Set(state.items.filter(i => i.name.toLowerCase().includes(q)).map(i => i.categoryId));
+    categoriesToDisplay = state.categories.filter(c => matchingCatIds.has(c.id));
+  }
+
+  if(categoriesToDisplay.length === 0){
+    return `<div class="empty">Eşleşen kategori veya malzeme bulunamadı.</div>`;
+  }
+
+  return categoriesToDisplay.map(cat => {
+    const count = state.items.filter(i => i.categoryId === cat.id).length;
+    const catItems = state.items.filter(i => i.categoryId === cat.id);
+    const hasLow = catItems.some(i => statusOf(i) === 'low');
+    const hasWatch = catItems.some(i => statusOf(i) === 'watch');
+    const statusCls = hasLow ? 'low' : (hasWatch ? 'watch' : 'ok');
+
+    return `
+    <div class="cat-card" data-toggle="${cat.id}">
+      <div class="cat-head">
+        <span class="cat-dot ${statusCls}"></span>
+        <span class="cat-name">${escapeHtml(cat.name)}</span>
+        <span class="cat-count">${count} Malzeme</span>
+        ${isEngineer() ? `<button class="cat-del" data-delcat="${cat.id}">Sil</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCategoryDetail(cat){
+  let html = `
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+      <button class="btn ghost small" id="backToCats">← Geri</button>
+      <div class="view-title" style="margin:0;">${escapeHtml(cat.name)}</div>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Bu kategoride ara..." value="${escapeHtml(searchQuery)}">
+    </div>
+    <div class="filter-pills">
+      <button class="pill ${activeFilter==='all'?'active':''}" data-filter="all">Tümü</button>
+      <button class="pill ${activeFilter==='low'?'active':''}" data-filter="low">Kritik Stok</button>
+      <button class="pill ${activeFilter==='watch'?'active':''}" data-filter="watch">Azalanlar</button>
+    </div>
+    <div id="itemDetailContainer">
+      ${renderCategoryDetailItemsHtml(cat)}
+    </div>`;
+
+  return html;
+}
+
+function renderCategoryDetailItemsHtml(cat){
+  let its = state.items.filter(i => i.categoryId === cat.id);
+  if(searchQuery.trim()){
+    const q = searchQuery.toLowerCase();
+    its = its.filter(i => i.name.toLowerCase().includes(q));
+  }
+  if(activeFilter === 'low') its = its.filter(i => statusOf(i) === 'low');
+  if(activeFilter === 'watch') its = its.filter(i => statusOf(i) === 'watch');
+
+  if(its.length === 0) return `<div class="empty">Listelenecek malzeme bulunamadı.</div>`;
+
+  return its.map(it => {
+    const s = statusOf(it);
+    const badgeText = s === 'low' ? 'Kritik' : s === 'watch' ? 'Azalıyor' : 'Yeterli';
+    return `
+    <div class="item ${s}">
+      <div class="item-main">
+        <div class="item-name">${escapeHtml(it.name)}</div>
+        <div class="item-meta">
+          <span class="figure">Eşik: ${it.min} ${escapeHtml(it.unit||'adet')}</span>
+          <span class="badge ${s}">${badgeText}</span>
+        </div>
+      </div>
+      <div class="qty-controls">
+        <button class="qty-btn" data-qty="dec" data-item="${it.id}">−</button>
+        <span class="qty-val">${it.qty}</span>
+        <button class="qty-btn" data-qty="inc" data-item="${it.id}">+</button>
+      </div>
+      ${isEngineer() ? `<button class="cat-del" data-delitem="${it.id}" style="margin-left:8px;">Sil</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* LIFETIME VIEW */
+function renderLifetime(){
+  let html = `
+    <div class="view-title">Ömürlü Parça Takibi</div>
+    <div class="view-sub">IS Makinesi, Robot ve Hatlardaki parçaların çalışma sürelerini izleyin.</div>
+    
+    <div class="card-box">
+      <div style="font-weight:700; font-size:0.9rem; margin-bottom:12px; color:var(--gca-navy);">Yeni Parça / Ekipman Tanımla</div>
+      <div class="field-row">
+        <div class="field"><label>Makine / Ekipman Adı</label><input type="text" id="lifeMachine" placeholder="ör. Robot 1 / IS Makinesi A"></div>
+        <div class="field"><label>Parça Adı</label><input type="text" id="lifeName" placeholder="ör. X Keçesi / Vakum Kaplama"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Takıldığı / Sıfırlandığı Tarih</label><input type="date" id="lifeDate"></div>
+        <div class="field"><label>Kullanım Ömrü (Gün)</label><input type="number" id="lifeSpan" value="30" placeholder="ör. 30 (1 ay)"></div>
+      </div>
+      <button class="btn small" id="addLifetimeBtn">Takibe Al</button>
+    </div>
+    
+    <div style="font-size:0.85rem; font-weight:700; color:var(--text-muted); margin-bottom:10px;">TAKİPTEKİ PARÇALAR</div>`;
+
+  if(state.lifetimeItems.length === 0){
+    return html + `<div class="empty">Henüz ömür takibi yapılan bir parça eklenmedi.</div>`;
+  }
+
+  html += state.lifetimeItems.map(item => {
+    const info = calcLifetimeStatus(item);
+    let borderCls = 'ok';
+    let badgeText = `Kalan: ${info.remainingDays} gün`;
+    let badgeCls = 'ok';
+
+    if (info.status === 'expired') {
+      borderCls = 'low'; badgeText = `DEĞİŞİM ZAMANI GELDI (${Math.abs(info.remainingDays)} gün geçti)`; badgeCls = 'low';
+    } else if (info.status === 'warning') {
+      borderCls = 'watch'; badgeText = `DEĞİŞİM YAKLAŞTI (${info.remainingDays} gün kaldı)`; badgeCls = 'watch';
+    }
+
+    return `
+    <div class="item ${borderCls}">
+      <div class="item-main">
+        <div class="item-name">${escapeHtml(item.machineName)} - ${escapeHtml(item.name)}</div>
+        <div class="item-meta">
+          <span class="figure">Takılma: ${fmtDate(item.installDate)} | Ömür: ${item.lifeSpanDays} gün</span>
+          <span class="badge ${badgeCls}">${badgeText}</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="btn ghost small" data-resetlife="${item.id}" title="Parça Değiştirildi">🔄 Sıfırla</button>
+        ${isEngineer() ? `<button class="cat-del" data-dellife="${item.id}">Sil</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  return html;
+}
+
+/* NEW ENTRY */
+function renderNewEntry(){
+  return `
+    <div class="view-title">Yeni Giriş Ekle</div>
+    <div class="view-sub">Envantere yeni grup veya yedek parça tanımı yapın.</div>
+
+    <div class="card-box">
+      <div style="font-weight:700; font-size:0.9rem; margin-bottom:12px; color:var(--gca-navy);">Yeni Kategori Ekle</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Kategori Adı</label>
+          <input type="text" id="newCatName" placeholder="ör. Robot Sarf / Mekanik">
+        </div>
+      </div>
+      <button class="btn small" id="addCatBtn">Kategori Oluştur</button>
+    </div>
+
+    <div class="card-box">
+      <div style="font-weight:700; font-size:0.9rem; margin-bottom:12px; color:var(--gca-navy);">Yeni Malzeme Ekle</div>
+      ${state.categories.length === 0 ? '<div class="empty">Önce bir kategori eklemelisiniz.</div>' : `
+      <div class="field-row">
+        <div class="field">
+          <label>Kategori</label>
+          <select id="newItemCat">${state.categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Malzeme Adı</label><input type="text" id="newItemName"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Başlangıç Stok</label><input type="number" min="0" id="newItemQty" value="0"></div>
+        <div class="field"><label>Kritik Eşik</label><input type="number" min="0" id="newItemMin" value="0"></div>
+        <div class="field"><label>Birim</label><input type="text" id="newItemUnit" placeholder="adet, kg, metre..."></div>
+      </div>
+      <button class="btn small" id="addItemBtn">Malzemeyi Kaydet</button>
+      `}
+    </div>`;
+}
+
+/* INCOMING & REQUESTS */
+function renderIncoming(){
+  let html = `
+    <div class="view-title">Talepler & Sevkiyat Yönetimi</div>
+    <div class="view-sub">Saha ekibinin malzeme talepleri, mühendis onayları ve gelecek sevkiyatlar.</div>
+    
+    <div class="card-box">
+      <div style="font-weight:700; font-size:0.9rem; margin-bottom:12px; color:var(--gca-navy);">📝 Satın Alma / İhtiyaç Talebi Oluştur</div>
+      <div class="field-row">
+        <div class="field"><label>Malzeme Adı (Envanter dışı da yazılabilir)</label><input type="text" id="reqItemName" placeholder="ör. 24V Valf / M8 Cıvata"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Gerekli Miktar</label><input type="number" min="1" id="reqQty" value="1"></div>
+        <div class="field"><label>Birim</label><input type="text" id="reqUnit" placeholder="adet, kutu, metre..."></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Talep / Kullanım Gerekçesi</label><input type="text" id="reqReason" placeholder="ör. Robot 2 bakımı için gerekli"></div>
+      </div>
+      <button class="btn small" id="addReqBtn">Talebi Mühendise Gönder</button>
+    </div>
+    
+    <div style="font-size:0.85rem; font-weight:700; color:var(--text-muted); margin-bottom:10px;">ONAY BEKLEYEN İHTİYAÇ TALEPLERİ</div>`;
+
+  const pendingReqs = state.requests.filter(r => r.status === 'pending');
+  if(pendingReqs.length === 0){
+    html += `<div class="empty" style="margin-bottom:20px;">Onay bekleyen talep bulunmamaktadır.</div>`;
+  } else {
+    html += pendingReqs.map(req => `
+      <div class="incoming-row">
+        <div class="incoming-top">
+          <span class="incoming-item">${escapeHtml(req.itemName)} — ${req.qty} ${escapeHtml(req.unit)}</span>
+          <span class="incoming-date">Talep eden: ${escapeHtml(req.requestedBy)}</span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Gerekçe: ${escapeHtml(req.reason||'Belirtilmedi')}</div>
+        <div class="incoming-meta-row">
+          <span class="badge watch">Mühendis Onayı Bekliyor</span>
+          ${isEngineer() ? `
+            <div style="display:flex; gap:6px;">
+              <button class="btn danger small" data-rejectreq="${req.id}">Reddet</button>
+              <button class="btn success small" data-approvereq="${req.id}">Onayla & Sevkiyata Ekle</button>
+            </div>
+          ` : '<span style="font-size:0.75rem; color:var(--text-muted);">Sadece mühendis onaylayabilir</span>'}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  html += `<div style="font-size:0.85rem; font-weight:700; color:var(--text-muted); margin-bottom:10px; margin-top:24px;">GELECEK MALZEMELER / SEVKİYAT LİSTESİ</div>`;
+
+  const pendingIncoming = [...state.incoming].sort((a,b) => a.expectedDate.localeCompare(b.expectedDate));
+  if(pendingIncoming.length === 0){
+    html += `<div class="empty">Gelecek bekleyen sevkiyat bulunmamaktadır.</div>`;
+  } else {
+    html += pendingIncoming.map(inc => `
+      <div class="incoming-row" style="border-left: 4px solid var(--gca-blue);">
+        <div class="incoming-top">
+          <span class="incoming-item">${escapeHtml(inc.itemName)}</span>
+          <span class="incoming-date">Varış: ${fmtDate(inc.expectedDate)}</span>
+        </div>
+        <div class="incoming-meta-row">
+          <span style="font-size:0.85rem; font-weight:600;">Beklenen: ${inc.qty} ${escapeHtml(inc.unit||'adet')}</span>
+          <button class="btn small success" data-receive="${inc.id}">Teslim Alındı (Stoğa Ekle)</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  return html;
+}
+
+/* HISTORY */
+function renderHistory(){
+  let html = `<div class="view-title">İşlem Geçmişi</div><div class="view-sub">Sistem genelindeki son stok hareketleri ve talep geçmişi.</div>`;
+  if(state.history.length === 0) return html + `<div class="empty">Kayıt bulunamadı.</div>`;
+  
+  html += state.history.map(h => {
+    const t = new Date(h.ts);
+    return `<div class="hist-row">
+      <div class="hist-top"><span class="hist-user">${escapeHtml(h.user)}</span><span class="hist-time">${t.toLocaleDateString('tr-TR')} ${t.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}</span></div>
+      <div>${escapeHtml(h.action)}</div>
+    </div>`;
+  }).join('');
+  return html;
+}
+
+/* USERS */
+function renderUsers(){
+  let html = `
+    <div class="view-title">Kullanıcı Yönetimi</div>
+    <div class="view-sub">Sistem kullanıcıları ve erişim yetkileri.</div>
+    <div class="card-box">
+      <div class="field-row"><div class="field"><label>Ad Soyad</label><input type="text" id="newUserName"></div></div>
+      <div class="field-row">
+        <div class="field"><label>Kullanıcı Adı</label><input type="text" id="newUserUsername"></div>
+        <div class="field"><label>Şifre</label><input type="password" id="newUserPassword"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Yetki Türü</label>
+          <select id="newUserRole">
+            <option value="field">Saha Ekibi</option>
+            <option value="engineer">Mühendis (Tam Yetki)</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn small" id="addUserBtn">Kullanıcıyı Kaydet</button>
+    </div>`;
+
+  html += users.map(u => `
+    <div class="item" style="border-left:none;">
+      <div class="item-main">
+        <div class="item-name">${escapeHtml(u.name)}</div>
+        <div class="item-meta"><span class="figure">@${escapeHtml(u.username)}</span></div>
+      </div>
+      <span class="role-badge ${u.role}">${u.role === 'engineer' ? 'MÜHENDİS' : 'SAHA'}</span>
+    </div>
+  `).join('');
+
+  return html;
+}
+
+/* EVENT LISTENERS */
+function attachViewHandlers(){
+  const root = document.getElementById('mainContent');
+
+  // Kesintisiz Arama (Focus Kaybolmasını Engeller)
+  const sInput = document.getElementById('searchInput');
+  if(sInput) {
+    sInput.addEventListener('input', (e) => { 
+      searchQuery = e.target.value; 
+      const catContainer = document.getElementById('categoryContainer');
+      const itemContainer = document.getElementById('itemDetailContainer');
+      
+      if(catContainer) {
+        catContainer.innerHTML = renderCategoryItemsHtml();
+        attachDynamicEvents();
+      }
+      if(itemContainer) {
+        const cat = state.categories.find(c => c.id === selectedCategoryId);
+        if(cat) itemContainer.innerHTML = renderCategoryDetailItemsHtml(cat);
+        attachDynamicEvents();
+      }
+    });
+  }
+
+  root.querySelectorAll('[data-filter]').forEach(el => {
+    el.addEventListener('click', () => { activeFilter = el.dataset.filter; render(); });
+  });
+
+  const expBtn = document.getElementById('exportBtn');
+  if(expBtn) expBtn.addEventListener('click', exportToCSV);
+
+  const backBtn = document.getElementById('backToCats');
+  if(backBtn) backBtn.addEventListener('click', () => { selectedCategoryId = null; render(); });
+
+  attachDynamicEvents();
+
+  /* Lifetime Handlers */
+  const addLifetimeBtn = document.getElementById('addLifetimeBtn');
+  if(addLifetimeBtn){
+    if(!document.getElementById('lifeDate').value) {
+      document.getElementById('lifeDate').value = new Date().toISOString().slice(0,10);
+    }
+    
+    addLifetimeBtn.addEventListener('click', () => {
+      const machineName = document.getElementById('lifeMachine').value.trim();
+      const name = document.getElementById('lifeName').value.trim();
+      const installDate = document.getElementById('lifeDate').value;
+      const lifeSpanDays = parseInt(document.getElementById('lifeSpan').value, 10) || 30;
+
+      if(!machineName || !name || !installDate) {
+        alert('Lütfen tüm alanları doldurun.');
+        return;
+      }
+
+      state.lifetimeItems.push({ id: uid('l'), machineName, name, installDate, lifeSpanDays });
+      logHistory(`"${machineName} - ${name}" parçası ömür takibine eklendi.`);
+      saveData(); render();
+    });
+  }
+
+  /* REQUEST & INCOMING HANDLERS */
+  const addReqBtn = document.getElementById('addReqBtn');
+  if(addReqBtn) {
+    addReqBtn.addEventListener('click', () => {
+      const itemName = document.getElementById('reqItemName').value.trim();
+      const qty = parseInt(document.getElementById('reqQty').value, 10) || 1;
+      const unit = document.getElementById('reqUnit').value.trim() || 'adet';
+      const reason = document.getElementById('reqReason').value.trim();
+
+      if(!itemName) { alert('Lütfen malzeme adını yazınız.'); return; }
+
+      state.requests.push({
+        id: uid('r'),
+        itemName,
+        qty,
+        unit,
+        reason,
+        requestedBy: currentUser.name,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      });
+
+      logHistory(`Yeni malzeme talebi oluşturuldu: ${itemName} (${qty} ${unit})`);
+      saveData(); render();
+    });
+  }
+
+  root.querySelectorAll('[data-approvereq]').forEach(el => {
+    el.addEventListener('click', () => {
+      const reqId = el.dataset.approvereq;
+      const req = state.requests.find(r => r.id === reqId);
+      if(!req) return;
+
+      askConfirm(`"${req.itemName}" talebi onaylanarak sevkiyat listesine aktarılacak.`, (expectedDate) => {
+        req.status = 'approved';
+        state.incoming.push({
+          id: uid('n'),
+          requestId: req.id,
+          itemName: req.itemName,
+          qty: req.qty,
+          unit: req.unit,
+          expectedDate: expectedDate,
+          createdBy: currentUser.name
+        });
+        logHistory(`Malzeme talebi onaylandı: ${req.itemName}`);
+        saveData(); render();
+      }, true);
+    });
+  });
+
+  root.querySelectorAll('[data-rejectreq]').forEach(el => {
+    el.addEventListener('click', () => {
+      const reqId = el.dataset.rejectreq;
+      const req = state.requests.find(r => r.id === reqId);
+      if(!req) return;
+
+      askConfirm(`"${req.itemName}" talebini reddetmek istediğinizden emin misiniz?`, () => {
+        req.status = 'rejected';
+        logHistory(`Malzeme talebi reddedildi: ${req.itemName}`);
+        saveData(); render();
+      });
+    });
+  });
+
+  root.querySelectorAll('[data-receive]').forEach(el => {
+    el.addEventListener('click', () => {
+      const inc = state.incoming.find(i => i.id === el.dataset.receive);
+      if(!inc) return;
+
+      askConfirm(`"${inc.itemName}" teslim alındı olarak işaretlenecek. Envanter stoğuna eklensin mi?`, () => {
+        let matchedItem = state.items.find(i => i.name.toLowerCase() === inc.itemName.toLowerCase());
+        
+        if(matchedItem) {
+          matchedItem.qty += inc.qty;
+        } else {
+          let defaultCat = state.categories[0];
+          if(!defaultCat) {
+            defaultCat = { id: uid('c'), name: 'Genel / Yeni Gelenler' };
+            state.categories.push(defaultCat);
+          }
+          state.items.push({
+            id: uid('i'),
+            categoryId: defaultCat.id,
+            name: inc.itemName,
+            qty: inc.qty,
+            min: 1,
+            unit: inc.unit || 'adet'
+          });
+        }
+
+        state.incoming = state.incoming.filter(i => i.id !== inc.id);
+        logHistory(`Gelen sevkiyat teslim alındı ve stoğa işlendi: ${inc.itemName} (+${inc.qty})`);
+        saveData(); render();
+      });
+    });
+  });
+
+  /* Other Add Handlers */
+  const addCatBtn = document.getElementById('addCatBtn');
+  if(addCatBtn) addCatBtn.addEventListener('click', () => {
+    const name = document.getElementById('newCatName').value.trim();
+    if(!name) return;
+    state.categories.push({ id: uid('c'), name });
+    logHistory(`"${name}" adında yeni kategori eklendi.`);
+    saveData(); render();
+  });
+
+  const addItemBtn = document.getElementById('addItemBtn');
+  if(addItemBtn) addItemBtn.addEventListener('click', () => {
+    const catId = document.getElementById('newItemCat').value;
+    const name = document.getElementById('newItemName').value.trim();
+    if(!name) return;
+    const qty = parseInt(document.getElementById('newItemQty').value, 10) || 0;
+    const min = parseInt(document.getElementById('newItemMin').value, 10) || 0;
+    const unit = document.getElementById('newItemUnit').value.trim();
+
+    state.items.push({ id: uid('i'), categoryId: catId, name, qty, min, unit });
+    logHistory(`"${name}" malzemesi eklendi.`);
+    saveData(); render();
+  });
+
+  const addUserBtn = document.getElementById('addUserBtn');
+  if(addUserBtn) addUserBtn.addEventListener('click', () => {
+    const name = document.getElementById('newUserName').value.trim();
+    const username = document.getElementById('newUserUsername').value.trim();
+    const password = document.getElementById('newUserPassword').value;
+    const role = document.getElementById('newUserRole').value;
+    if(!name || !username || !password) return;
+
+    users.push({ username, password, name, role });
+    saveUsers(); render();
+  });
+}
+
+function attachDynamicEvents(){
+  const root = document.getElementById('mainContent');
+
+  root.querySelectorAll('[data-toggle]').forEach(el => {
+    el.onclick = (e) => {
+      if(e.target.closest('[data-delcat]')) return;
+      selectedCategoryId = el.dataset.toggle;
+      render();
+    };
+  });
+
+  root.querySelectorAll('[data-delcat]').forEach(el => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      const id = el.dataset.delcat;
+      askConfirm(`Bu kategoriyi ve altındaki tüm malzemeleri silmek istediğinizden emin misiniz?`, () => {
+        state.items = state.items.filter(i => i.categoryId !== id);
+        state.categories = state.categories.filter(c => c.id !== id);
+        saveData(); render();
+      });
+    };
+  });
+
+  root.querySelectorAll('[data-qty]').forEach(el => {
+    el.onclick = () => {
+      const item = state.items.find(i => i.id === el.dataset.item);
+      if(!item) return;
+      if(el.dataset.qty === 'inc') item.qty += 1;
+      else item.qty = Math.max(0, item.qty - 1);
+      logHistory(`"${item.name}" stok adedi güncellendi: ${item.qty}`);
+      saveData(); render();
+    };
+  });
+
+  root.querySelectorAll('[data-delitem]').forEach(el => {
+    el.onclick = () => {
+      const id = el.dataset.delitem;
+      askConfirm(`Bu malzemeyi silmek istediğinizden emin misiniz?`, () => {
+        state.items = state.items.filter(i => i.id !== id);
+        saveData(); render();
+      });
+    };
+  });
+
+  root.querySelectorAll('[data-resetlife]').forEach(el => {
+    el.onclick = () => {
+      const item = state.lifetimeItems.find(i => i.id === el.dataset.resetlife);
+      if(!item) return;
+      askConfirm(`"${item.name}" parçası değiştirildi olarak işaretlensin mi? (Takılma tarihi bugüne sıfırlanacak)`, () => {
+        item.installDate = new Date().toISOString().slice(0,10);
+        logHistory(`"${item.machineName} - ${item.name}" parçası değiştirildi ve sayacı sıfırlandı.`);
+        saveData(); render();
+      });
+    };
+  });
+
+  root.querySelectorAll('[data-dellife]').forEach(el => {
+    el.onclick = () => {
+      const id = el.dataset.dellife;
+      askConfirm(`Bu parçayı ömür takibinden çıkarmak istediğinizden emin misiniz?`, () => {
+        state.lifetimeItems = state.lifetimeItems.filter(i => i.id !== id);
+        saveData(); render();
+      });
+    };
+  });
+}
+
+/* INIT */
+(function init(){
+  loadAll();
+  if(currentUser) showApp();
+})();
+</script>
+</body>
+</html>
