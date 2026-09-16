@@ -180,19 +180,21 @@
   .banner.warning-banner {
     background: var(--warning-bg); border-color: rgba(245, 158, 11, 0.2);
   }
-  .banner-title { font-weight: 700; color: var(--danger); font-size: 0.9rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .banner-title { font-weight: 700; color: var(--danger); font-size: 0.9rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
   .banner.warning-banner .banner-title { color: var(--warning); }
   .banner-row { font-size: 0.85rem; display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px dashed rgba(239, 68, 68, 0.2); }
   .banner.warning-banner .banner-row { border-top-color: rgba(245, 158, 11, 0.2); }
   .banner-row:first-of-type { border-top: none; }
 
   /* Search & Filters */
-  .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
-  .search-bar input {
-    flex: 1; padding: 10px 14px; border: 1px solid var(--border-color);
+  .search-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-bar input, .search-bar select {
+    padding: 10px 14px; border: 1px solid var(--border-color);
     border-radius: var(--radius); background: var(--panel-bg); font-size: 0.9rem;
   }
-  .search-bar input:focus { outline: none; border-color: var(--gca-blue); }
+  .search-bar input { flex: 2; min-width: 180px; }
+  .search-bar select { flex: 1; min-width: 130px; }
+  .search-bar input:focus, .search-bar select:focus { outline: none; border-color: var(--gca-blue); }
 
   .filter-pills { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
   .pill {
@@ -299,9 +301,9 @@
   /* Confirm Modal */
   .modal-overlay { position: fixed; inset: 0; background: rgba(10,25,47,0.5); z-index: 50; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); }
   .modal-overlay.open { display: flex; }
-  .modal-box { background: var(--panel-bg); border-radius: var(--radius); padding: 20px; max-width: 400px; width: 100%; box-shadow: var(--shadow-md); }
+  .modal-box { background: var(--panel-bg); border-radius: var(--radius); padding: 20px; max-width: 440px; width: 100%; box-shadow: var(--shadow-md); max-height:85vh; overflow-y:auto; }
   .modal-box p { font-size: 0.9rem; margin-bottom: 16px; line-height: 1.5; color: var(--text-main); }
-  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 </style>
 </head>
 <body>
@@ -356,7 +358,7 @@
     <div class="drawer-item" data-view="lifetime">Ömürlü Parçalar</div>
     <div class="drawer-item" data-view="newentry" id="menuNewEntry">Yeni Giriş Ekle</div>
     <div class="drawer-item" data-view="incoming">Talepler & Sevkiyat</div>
-    <div class="drawer-item" data-view="history" id="menuHistory">İşlem Geçmişi</div>
+    <div class="drawer-item" data-view="history" id="menuHistory">İşlem Geçmişi & Yedeğe Al</div>
     <div class="drawer-item" data-view="users" id="menuUsers">Kullanıcı Yönetimi</div>
     <div class="drawer-footer">
       <div class="logout-item" id="logoutBtn">Çıkış Yap</div>
@@ -413,6 +415,7 @@ let currentView = 'dashboard';
 let selectedCategoryId = null;
 let searchQuery = '';
 let activeFilter = 'all';
+let selectedMachineFilter = 'all';
 
 /* HELPERS */
 function uid(p){ return (p||'i') + Date.now() + Math.floor(Math.random()*1000); }
@@ -477,6 +480,46 @@ function exportToCSV() {
   document.body.removeChild(a);
 }
 
+/* JSON Export & Import (Yedekleme) */
+function exportBackupJSON() {
+  const backupData = {
+    state,
+    users,
+    exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('href', url);
+  a.setAttribute('download', `GCA_YEDEK_${new Date().toISOString().slice(0,10)}.json`);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  logHistory('Sistem yedeği JSON dosyası olarak indirildi.');
+}
+
+function importBackupJSON(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if(imported.state && imported.users) {
+        state = imported.state;
+        users = imported.users;
+        saveData();
+        saveUsers();
+        alert('Sistem yedeği başarıyla geri yüklendi!');
+        location.reload();
+      } else {
+        alert('Geçersiz yedek dosyası formatı.');
+      }
+    } catch(err) {
+      alert('Yedek dosyası okunurken hata oluştu.');
+    }
+  };
+  reader.readAsText(file);
+}
+
 /* STORAGE OPS */
 function loadAll(){
   const localUsers = localStorage.getItem(USERS_KEY);
@@ -518,13 +561,13 @@ function saveSession(){
 }
 
 /* CONFIRM MODAL */
-function askConfirm(message, onYes, showDateInput = false){
+function askConfirm(message, onYes, customHtml = null){
   document.getElementById('modalMessage').textContent = message;
   const modalInputs = document.getElementById('modalInputs');
   
-  if(showDateInput){
+  if(customHtml){
     modalInputs.style.display = 'block';
-    modalInputs.innerHTML = `<div class="field"><label style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Tahmini Varış Tarihi</label><input type="date" id="modalDateVal" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px;" value="${new Date().toISOString().slice(0,10)}"></div>`;
+    modalInputs.innerHTML = customHtml;
   } else {
     modalInputs.style.display = 'none';
     modalInputs.innerHTML = '';
@@ -540,13 +583,8 @@ function askConfirm(message, onYes, showDateInput = false){
   };
   
   yesBtn.onclick = () => {
-    let dateVal = null;
-    if(showDateInput){
-      dateVal = document.getElementById('modalDateVal').value;
-      if(!dateVal) { alert('Lütfen tarih seçiniz.'); return; }
-    }
     cleanup();
-    onYes(dateVal);
+    onYes();
   };
   noBtn.onclick = cleanup;
 }
@@ -630,7 +668,7 @@ function switchView(view){
     lifetime:'GCA — Ömürlü Parçalar',
     newentry:'GCA — Yeni Giriş', 
     incoming:'GCA — Talepler & Sevkiyat', 
-    history:'GCA — İşlem Geçmişi', 
+    history:'GCA — İşlem Geçmişi & Yedek', 
     users:'GCA — Kullanıcı Yönetimi' 
   };
   document.getElementById('topbarTitle').textContent = titles[view] || 'GCA Envanter';
@@ -685,8 +723,11 @@ function renderDashboard(){
 
   if(low.length){
     html += `<div class="banner">
-      <div class="banner-title">Kritik Stok Seviyeleri</div>
-      ${low.map(it => `<div class="banner-row"><span style="font-weight:600;">${escapeHtml(it.name)}</span><span>Mevcut: ${it.qty} / Eşik: ${it.min}</span></div>`).join('')}
+      <div class="banner-title">
+        <span>Kritik Stok Seviyeleri (${low.length})</span>
+        <button class="btn danger small" id="bulkRequestBtn">🚨 Tümünü Toplu Talep Et</button>
+      </div>
+      ${low.map(it => `<div class="banner-row"><span style="font-weight:600;">${escapeHtml(it.name)}</span><span>Mevcut: ${it.qty} / Eşik: ${it.min} ${escapeHtml(it.unit||'adet')}</span></div>`).join('')}
     </div>`;
   }
 
@@ -705,7 +746,7 @@ function renderInventory(){
 
 function renderCategoryList(){
   let html = `
-    <div style="display:flex; justify-content:space-between; align-align:center; margin-bottom:12px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
       <div>
         <div class="view-title">Envanter Listesi</div>
         <div class="view-sub">Kategorilere göre stok durumları.</div>
@@ -713,7 +754,7 @@ function renderCategoryList(){
       <button class="btn ghost small" id="exportBtn">CSV İndir</button>
     </div>
     <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="Malzeme adı ile ara..." value="${escapeHtml(searchQuery)}">
+      <input type="text" id="searchInput" placeholder="Malzeme veya kategori ara..." value="${escapeHtml(searchQuery)}">
     </div>
     <div id="categoryContainer">
       ${renderCategoryItemsHtml()}
@@ -727,7 +768,7 @@ function renderCategoryItemsHtml(){
   if(searchQuery.trim()){
     const q = searchQuery.toLowerCase();
     const matchingCatIds = new Set(state.items.filter(i => i.name.toLowerCase().includes(q)).map(i => i.categoryId));
-    categoriesToDisplay = state.categories.filter(c => matchingCatIds.has(c.id));
+    categoriesToDisplay = state.categories.filter(c => c.name.toLowerCase().includes(q) || matchingCatIds.has(c.id));
   }
 
   if(categoriesToDisplay.length === 0){
@@ -761,11 +802,11 @@ function renderCategoryDetail(cat){
     </div>
     <div class="search-bar">
       <input type="text" id="searchInput" placeholder="Bu kategoride ara..." value="${escapeHtml(searchQuery)}">
-    </div>
-    <div class="filter-pills">
-      <button class="pill ${activeFilter==='all'?'active':''}" data-filter="all">Tümü</button>
-      <button class="pill ${activeFilter==='low'?'active':''}" data-filter="low">Kritik Stok</button>
-      <button class="pill ${activeFilter==='watch'?'active':''}" data-filter="watch">Azalanlar</button>
+      <select id="statusFilterSelect">
+        <option value="all" ${activeFilter==='all'?'selected':''}>Tüm Stoklar</option>
+        <option value="low" ${activeFilter==='low'?'selected':''}>🚨 Sadece Kritik</option>
+        <option value="watch" ${activeFilter==='watch'?'selected':''}>⚠️ Sadece Azalanlar</option>
+      </select>
     </div>
     <div id="itemDetailContainer">
       ${renderCategoryDetailItemsHtml(cat)}
@@ -809,6 +850,8 @@ function renderCategoryDetailItemsHtml(cat){
 
 /* LIFETIME VIEW */
 function renderLifetime(){
+  const machines = Array.from(new Set(state.lifetimeItems.map(i => i.machineName)));
+
   let html = `
     <div class="view-title">Ömürlü Parça Takibi</div>
     <div class="view-sub">IS Makinesi, Robot ve Hatlardaki parçaların çalışma sürelerini izleyin.</div>
@@ -826,13 +869,26 @@ function renderLifetime(){
       <button class="btn small" id="addLifetimeBtn">Takibe Al</button>
     </div>
     
-    <div style="font-size:0.85rem; font-weight:700; color:var(--text-muted); margin-bottom:10px;">TAKİPTEKİ PARÇALAR</div>`;
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">TAKİPTEKİ PARÇALAR</div>
+      ${machines.length > 0 ? `
+        <select id="machineFilterSelect" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border-color); font-size:0.8rem;">
+          <option value="all">Tüm Ekipmanlar (${state.lifetimeItems.length})</option>
+          ${machines.map(m => `<option value="${escapeHtml(m)}" ${selectedMachineFilter===m?'selected':''}>${escapeHtml(m)}</option>`).join('')}
+        </select>
+      ` : ''}
+    </div>`;
 
-  if(state.lifetimeItems.length === 0){
-    return html + `<div class="empty">Henüz ömür takibi yapılan bir parça eklenmedi.</div>`;
+  let filteredItems = state.lifetimeItems;
+  if(selectedMachineFilter !== 'all') {
+    filteredItems = filteredItems.filter(i => i.machineName === selectedMachineFilter);
   }
 
-  html += state.lifetimeItems.map(item => {
+  if(filteredItems.length === 0){
+    return html + `<div class="empty">Henüz ömür takibi yapılan bir parça eklenmedi veya seçilen filtrede kayıt yok.</div>`;
+  }
+
+  html += filteredItems.map(item => {
     const info = calcLifetimeStatus(item);
     let borderCls = 'ok';
     let badgeText = `Kalan: ${info.remainingDays} gün`;
@@ -972,9 +1028,21 @@ function renderIncoming(){
   return html;
 }
 
-/* HISTORY */
+/* HISTORY & BACKUP */
 function renderHistory(){
-  let html = `<div class="view-title">İşlem Geçmişi</div><div class="view-sub">Sistem genelindeki son stok hareketleri ve talep geçmişi.</div>`;
+  let html = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div>
+        <div class="view-title">İşlem Geçmişi & Veri Yedeği</div>
+        <div class="view-sub">Stok hareketleri, onaylar ve güvenli sistem yedeği.</div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="btn ghost small" id="backupExportBtn">📥 Yedeği İndir (JSON)</button>
+        <button class="btn ghost small" id="backupImportBtn">📤 Yedeği Yükle</button>
+        <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
+      </div>
+    </div>`;
+
   if(state.history.length === 0) return html + `<div class="empty">Kayıt bulunamadı.</div>`;
   
   html += state.history.map(h => {
@@ -1026,7 +1094,7 @@ function renderUsers(){
 function attachViewHandlers(){
   const root = document.getElementById('mainContent');
 
-  // Kesintisiz Arama (Focus Kaybolmasını Engeller)
+  // Kesintisiz Arama
   const sInput = document.getElementById('searchInput');
   if(sInput) {
     sInput.addEventListener('input', (e) => { 
@@ -1046,15 +1114,93 @@ function attachViewHandlers(){
     });
   }
 
-  root.querySelectorAll('[data-filter]').forEach(el => {
-    el.addEventListener('click', () => { activeFilter = el.dataset.filter; render(); });
-  });
+  const statusFilterSelect = document.getElementById('statusFilterSelect');
+  if(statusFilterSelect){
+    statusFilterSelect.addEventListener('change', (e) => {
+      activeFilter = e.target.value;
+      const cat = state.categories.find(c => c.id === selectedCategoryId);
+      if(cat) {
+        document.getElementById('itemDetailContainer').innerHTML = renderCategoryDetailItemsHtml(cat);
+        attachDynamicEvents();
+      }
+    });
+  }
+
+  const machineFilterSelect = document.getElementById('machineFilterSelect');
+  if(machineFilterSelect){
+    machineFilterSelect.addEventListener('change', (e) => {
+      selectedMachineFilter = e.target.value;
+      render();
+    });
+  }
 
   const expBtn = document.getElementById('exportBtn');
   if(expBtn) expBtn.addEventListener('click', exportToCSV);
 
+  const backupExportBtn = document.getElementById('backupExportBtn');
+  if(backupExportBtn) backupExportBtn.addEventListener('click', exportBackupJSON);
+
+  const backupImportBtn = document.getElementById('backupImportBtn');
+  const jsonFileInput = document.getElementById('jsonFileInput');
+  if(backupImportBtn && jsonFileInput) {
+    backupImportBtn.addEventListener('click', () => jsonFileInput.click());
+    jsonFileInput.addEventListener('change', (e) => {
+      if(e.target.files.length > 0) importBackupJSON(e.target.files[0]);
+    });
+  }
+
   const backBtn = document.getElementById('backToCats');
   if(backBtn) backBtn.addEventListener('click', () => { selectedCategoryId = null; render(); });
+
+  /* Bulk Request (Toplu Talep) */
+  const bulkBtn = document.getElementById('bulkRequestBtn');
+  if(bulkBtn) {
+    bulkBtn.addEventListener('click', () => {
+      const lowItems = state.items.filter(it => statusOf(it) === 'low');
+      if(lowItems.length === 0) return;
+
+      let htmlInputs = `<div style="max-height:260px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px; padding:10px; margin-bottom:12px;">`;
+      lowItems.forEach(it => {
+        const suggestedQty = Math.max(1, (it.min * 2) - it.qty);
+        htmlInputs += `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--bg-main);">
+            <div style="font-size:0.8rem; font-weight:600; flex:1;">${escapeHtml(it.name)}</div>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <input type="number" min="1" class="bulk-qty-input" data-itemid="${it.id}" data-itemname="${escapeHtml(it.name)}" data-unit="${escapeHtml(it.unit||'adet')}" value="${suggestedQty}" style="width:65px; padding:4px; border:1px solid var(--border-color); border-radius:4px; font-weight:600; text-align:center;">
+              <span style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(it.unit||'adet')}</span>
+            </div>
+          </div>
+        `;
+      });
+      htmlInputs += `</div>`;
+
+      askConfirm(`Kritik stoktaki ${lowItems.length} malzeme için talep oluşturulacak. İhtiyaç adetlerini kontrol edin:`, () => {
+        const inputs = document.querySelectorAll('.bulk-qty-input');
+        let count = 0;
+        inputs.forEach(inp => {
+          const qty = parseInt(inp.value, 10) || 1;
+          const itemName = inp.dataset.itemname;
+          const unit = inp.dataset.unit;
+
+          state.requests.push({
+            id: uid('r'),
+            itemName,
+            qty,
+            unit,
+            reason: 'Kritik stok otomasyonu ile oluşturuldu',
+            requestedBy: currentUser.name,
+            status: 'pending',
+            createdAt: new Date().toISOString()
+          });
+          count++;
+        });
+
+        logHistory(`Kritik stoktaki ${count} malzeme için otomatik toplu talep oluşturuldu.`);
+        saveData();
+        switchView('incoming');
+      }, htmlInputs);
+    });
+  }
 
   attachDynamicEvents();
 
@@ -1115,7 +1261,11 @@ function attachViewHandlers(){
       const req = state.requests.find(r => r.id === reqId);
       if(!req) return;
 
-      askConfirm(`"${req.itemName}" talebi onaylanarak sevkiyat listesine aktarılacak.`, (expectedDate) => {
+      const dateHtml = `<div class="field"><label style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Tahmini Varış Tarihi</label><input type="date" id="modalDateVal" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px;" value="${new Date().toISOString().slice(0,10)}"></div>`;
+
+      askConfirm(`"${req.itemName}" talebi onaylanarak sevkiyat listesine aktarılacak.`, () => {
+        const dateVal = document.getElementById('modalDateVal').value;
+        if(!dateVal) { alert('Lütfen tarih seçiniz.'); return; }
         req.status = 'approved';
         state.incoming.push({
           id: uid('n'),
@@ -1123,12 +1273,12 @@ function attachViewHandlers(){
           itemName: req.itemName,
           qty: req.qty,
           unit: req.unit,
-          expectedDate: expectedDate,
+          expectedDate: dateVal,
           createdBy: currentUser.name
         });
         logHistory(`Malzeme talebi onaylandı: ${req.itemName}`);
         saveData(); render();
-      }, true);
+      }, dateHtml);
     });
   });
 
